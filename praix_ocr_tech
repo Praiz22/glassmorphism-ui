@@ -1,0 +1,599 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Praix Tech — OCR UI Prototype</title>
+
+<!-- Chart.js CDN for pie chart -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<style>
+  :root{
+    --bg-1:#ffffff;
+    --bg-2:#fff5eb;   /* soft orange tint */
+    --bg-3:#ffe7cc;   /* deeper glow */
+    --card-bg:rgba(255,255,255,0.24); /* made slightly more transparent */
+    --card-border:rgba(255, 255, 255, 0.36);
+    --card-shadow:0 18px 44px rgba(0,0,0,0.28);
+    --text-1:#1f1f1f;
+    --text-2:#5a5a5a;
+    --brand:#ff7a18;
+    --brand-2:#ff4d00;
+    --muted:#e9e9e9;
+    --success:#0aa574;
+    --warning:#d97a00;
+    --radius-xl:22px;
+    --radius-lg:18px;
+    --radius-md:14px;
+    --ease-out:cubic-bezier(.2,.8,.2,1);
+  }
+
+  /* base */
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{
+    margin:0;
+    font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, "Helvetica Neue", Arial, "Apple Color Emoji","Segoe UI Emoji","Segoe UI Symbol";
+    color:var(--text-1);
+    background: linear-gradient(120deg, var(--bg-1), var(--bg-2), var(--bg-3));
+    background-size: 300% 300%;
+    animation: bg-move 18s var(--ease-out) infinite;
+  }
+  @keyframes bg-move{
+    0%{background-position:0% 50%}
+    50%{background-position:100% 50%}
+    100%{background-position:0% 50%}
+  }
+
+  .shell{
+    max-width:1200px;
+    margin: 48px auto 88px;
+    padding: 0 20px;
+  }
+
+  /* header */
+  .hero{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:16px;
+    margin-bottom:24px;
+  }
+  .brand{
+    display:flex;align-items:center;gap:14px;
+  }
+  .logo{
+    width:42px;height:42px;border-radius:14px;
+    background: linear-gradient(140deg,var(--brand),var(--brand-2));
+    box-shadow: 0 12px 28px rgba(255,125,24,.28);
+    position:relative;overflow:hidden;
+  }
+  .logo::after{
+    content:"";position:absolute;inset:0;
+    background: radial-gradient(120px 60px at 30% -30%,rgba(255,255,255,.6),transparent 60%),
+                radial-gradient(80px 40px at 90% 120%,rgba(255,255,255,.35),transparent 60%);
+    mix-blend-mode:screen;
+  }
+  .title{font-weight:700;font-size:1.35rem;letter-spacing:.3px}
+  .subtitle{color:var(--text-2);font-size:.95rem}
+
+  /* grid */
+  .grid{
+    display:grid;
+    grid-template-columns: repeat(12, 1fr);
+    gap:22px;
+  }
+  @media (max-width:980px){
+    .grid{grid-template-columns: repeat(6,1fr)}
+  }
+  @media (max-width:640px){
+    .grid{grid-template-columns: repeat(4,1fr)}
+  }
+
+  /* card (glassy) */
+  .card{
+    background: var(--card-bg);
+    border:1px solid var(--card-border);
+    backdrop-filter: blur(24px) saturate(120%) brightness(0.95); /* strong blur + slight darkening */
+    -webkit-backdrop-filter: blur(24px) saturate(120%) brightness(0.95);
+    border-radius: var(--radius-xl);
+    box-shadow: var(--card-shadow);
+    padding: 20px 20px;
+    transition: transform .35s var(--ease-out), box-shadow .35s var(--ease-out), border-color .35s var(--ease-out);
+    position:relative; overflow:hidden;
+  }
+  .card:hover{
+    transform: translateY(-6px);
+    box-shadow: 0 24px 48px rgba(0,0,0,.30);
+    border-color: rgba(255,255,255,.8);
+  }
+  .card .head{
+    display:flex; align-items:center; justify-content:space-between; gap:12px;
+    margin-bottom:12px;
+  }
+  .card h3{
+    margin:0; font-size:1.05rem; letter-spacing:.2px;
+  }
+  .soft-accent{
+    display:inline-block;
+    background: linear-gradient(90deg, rgba(255,122,24,.08), rgba(255,77,0,.08));
+    color: var(--brand-2);
+    border: 1px solid rgba(255,122,24,.22);
+    padding: 6px 10px; border-radius: 999px; font-size:.78rem; font-weight:600;
+  }
+
+  /* upload */
+  .drop{
+    border: 2px dashed rgba(0,0,0,.06);
+    background: rgba(255,255,255,0.78);
+    border-radius: var(--radius-lg);
+    padding: 28px;
+    text-align:center;
+    transition: border-color .3s var(--ease-out), background .3s var(--ease-out);
+  }
+  .drop.dragover{ border-color: var(--brand); background: rgba(255,255,255,.9); }
+  .drop p{margin:6px 0 0;color:var(--text-2);font-size:.95rem}
+  .btn{
+    appearance:none; border:0; outline:0; cursor:pointer;
+    padding: 12px 16px; border-radius: 12px; font-weight:700;
+    background: linear-gradient(120deg,var(--brand),var(--brand-2));
+    color:#fff; box-shadow: 0 12px 22px rgba(255,125,24,.28);
+    transition: transform .2s var(--ease-out), box-shadow .3s var(--ease-out), filter .2s var(--ease-out);
+  }
+  .btn:hover{ transform: translateY(-2px); box-shadow: 0 18px 32px rgba(255,125,24,.36); }
+  .btn:active{ transform: translateY(0); filter: brightness(.95); }
+
+  /* metrics (non-circular) */
+  .metrics{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  @media (max-width:640px){ .metrics{grid-template-columns:1fr} }
+
+  .metric{
+    background:#fff;border:1px solid #f3f3f3;border-radius:16px;
+    padding:14px 14px 16px; box-shadow: 0 8px 20px rgba(0,0,0,.06);
+    transition: transform .25s var(--ease-out), box-shadow .25s var(--ease-out);
+  }
+  .metric:hover{ transform: translateY(-3px); box-shadow: 0 12px 26px rgba(0,0,0,.08); }
+  .metric .row{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+  .metric .label{color:#6a6a6a;font-size:.9rem}
+  .metric .value{font-weight:800;color:var(--brand-2)}
+  .bar{
+    width:100%; height:12px; border-radius:10px; background:#f1f1f1; overflow:hidden; position:relative;
+  }
+  .bar > i{
+    display:block; height:100%; width:0%;
+    background: linear-gradient(90deg, var(--brand), var(--brand-2));
+    box-shadow: inset 0 0 12px rgba(255,125,24,.35);
+    transition: width .45s var(--ease-out);
+  }
+
+  /* Chart container (glass-styled) */
+  .chart-card{
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    gap:12px;
+  }
+  .chart-wrap{
+    width:120px;
+    height:120px;
+    border-radius: 100px;
+    padding:14px;
+    background: rgba(255,255,255,0.9);
+    border: 1px solid rgba(0,0,0,0.04);
+    box-shadow: 0 10px 30px rgba(0,0,0,0.06);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+  }
+  .chart-legend{
+    font-size:0.9rem;
+    color:var(--text-2);
+  }
+
+  /* timeline / stepper */
+  .steps{display:flex;gap:10px;flex-wrap:wrap;margin-top:6px}
+  .chip{
+    padding:7px 10px;border-radius:12px;border:1px solid rgba(0,0,0,.06);
+    background:rgba(255,255,255,.9);color:#6a6a6a;font-weight:600;font-size:.78rem;
+    transition: background .25s var(--ease-out), color .25s var(--ease-out), border-color .25s var(--ease-out);
+  }
+  .chip.active{ background: linear-gradient(90deg, rgba(255,122,24,.12), rgba(255,77,0,.12));
+                color: var(--brand-2); border-color: rgba(255,122,24,.35); }
+
+  /* tiny canvas panel (sparkline container) */
+  .spark{
+    background:#fff;border:1px solid #f3f3f3;border-radius:16px;
+    padding:12px; display:flex;gap:12px; align-items:center; justify-content:space-between;
+    box-shadow: 0 6px 16px rgba(0,0,0,.05);
+  }
+  canvas{ width:100%; height:50px; display:block; border-radius:10px; background: #fafafa; }
+
+  /* result box */
+  .result{
+    background:#fff;border:1px solid #f0f0f0;border-radius:16px;padding:16px;min-height:110px;
+    box-shadow: 0 8px 22px rgba(0,0,0,.06);
+  }
+  .result .tag{display:inline-block;margin-bottom:10px}
+  .mono{
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    font-size:.95rem;color:#252525;line-height:1.45;
+  }
+  .confidence{
+    margin-top:12px;
+    background:#fff;border:1px solid #f3f3f3;border-radius:12px;padding:10px;
+  }
+
+  /* utility */
+  .fade-in{opacity:0;animation: fadeIn .9s var(--ease-out) forwards}
+  .fade-in.delay{animation-delay:.2s}
+  .fade-in.delay2{animation-delay:.4s}
+  @keyframes fadeIn{ from{opacity:0; transform: translateY(8px)} to{opacity:1; transform: translateY(0)} }
+
+  /* floating soft glow dots (very subtle) */
+  .glow, .glow::after{
+    content:""; position:fixed; pointer-events:none; z-index:-1; border-radius:999px; filter: blur(40px);
+    background: radial-gradient(closest-side, rgba(255,170,90,.12), transparent 70%);
+    width:260px; height:260px; top:8%; left:6%;
+    animation: floaty 14s ease-in-out infinite alternate;
+  }
+  .glow::after{
+    width:360px;height:360px; top: auto; left:auto; bottom:10%; right:6%;
+    animation-duration: 18s;
+  }
+  @keyframes floaty{
+    from{ transform: translate(0,0) scale(1)}
+    to{ transform: translate(18px, -10px) scale(1.08)}
+  }
+
+  /* floating metric badges (applied across cards) */
+  .metric-badge{
+    position:absolute;
+    top:14px; right:14px;
+    background: linear-gradient(135deg, var(--brand), var(--brand-2));
+    color:#fff;
+    font-size:.78rem;
+    font-weight:700;
+    padding:6px 12px;
+    border-radius:999px;
+    box-shadow:0 8px 28px rgba(255,90,20,0.14);
+    transform: translateZ(0);
+  }
+
+  /* layout spans */
+  .col-8{grid-column: span 8}
+  .col-4{grid-column: span 4}
+  .col-6{grid-column: span 6}
+  .col-12{grid-column: span 12}
+  @media (max-width:980px){
+    .col-8,.col-6{grid-column: span 6}
+    .col-4{grid-column: span 6}
+  }
+  @media (max-width:640px){
+    .col-8,.col-6,.col-4,.col-12{grid-column: span 4}
+  }
+</style>
+</head>
+<body>
+<div class="glow"></div>
+
+<div class="shell">
+  <div class="hero fade-in">
+    <div class="brand">
+      <div class="logo"></div>
+      <div>
+        <div class="title">Praix Tech — OCR Lab</div>
+        <div class="subtitle">Futuristic UI Prototype • Upload → Preprocess → Train → Predict</div>
+      </div>
+    </div>
+    <button class="btn" id="startDemo">Start Demo</button>
+  </div>
+
+  <div class="grid">
+    <!-- Upload -->
+    <section class="card col-12 fade-in">
+      <div class="head">
+        <h3>Upload Image</h3>
+        <span class="soft-accent">10s processing budget</span>
+      </div>
+      <div class="drop" id="drop">
+        <svg width="44" height="44" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <path d="M12 16V8m0 0l-3 3m3-3l3 3" stroke="#ff6a1a" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+          <rect x="3" y="13.5" width="18" height="6.5" rx="2.5" stroke="#ff6a1a" stroke-width="1.2" fill="rgba(255,106,26,.07)"/>
+        </svg>
+        <p><strong>Drag & Drop</strong> an image here or <button class="btn" id="pick">Choose File</button></p>
+        <input type="file" id="fileInput" accept="image/*" hidden />
+      </div>
+
+
+    </section>
+
+    <!-- Preprocessing -->
+    <section class="card col-8 fade-in delay">
+      <div class="head">
+        <h3>Data Preprocessing</h3>
+        <span class="soft-accent" id="preStatus">Idle</span>
+      </div>
+
+      <div class="steps" id="preSteps">
+        <span class="chip active">Noise Removal</span>
+        <span class="chip">Thresholding</span>
+        <span class="chip">Deskew</span>
+        <span class="chip">Normalization</span>
+        <span class="chip">Ready</span>
+      </div>
+
+      <div class="metrics" style="margin-top:14px">
+        <div class="metric">
+          <div class="row"><span class="label">Noise Removal</span><span class="value" id="m_noise">0%</span></div>
+          <div class="bar"><i id="b_noise"></i></div>
+        </div>
+
+        <!-- THRESHOLDING metric replaced with PIE CHART -->
+        <div class="metric chart-card" style="display:flex;flex-direction:column;align-items:center;justify-content:center;">
+          <div class="row" style="width:100%;justify-content:space-between;align-items:center;margin-bottom:10px">
+            <span class="label">Thresholding</span>
+            <span class="value" id="m_thresh">0%</span>
+          </div>
+
+          <div class="chart-wrap" role="img" aria-label="Thresholding pie chart">
+            <canvas id="thresholdChart" width="100" height="100"></canvas>
+          </div>
+          <div class="chart-legend">Applied vs Remaining</div>
+        </div>
+
+        <div class="metric">
+          <div class="row"><span class="label">Deskew</span><span class="value" id="m_skew">0%</span></div>
+          <div class="bar"><i id="b_skew"></i></div>
+        </div>
+        <div class="metric">
+          <div class="row"><span class="label">Normalization</span><span class="value" id="m_norm">0%</span></div>
+          <div class="bar"><i id="b_norm"></i></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Training quick panel -->
+    <section class="card col-4 fade-in delay">
+      <div class="head">
+        <h3>Training Model</h3>
+        <span class="soft-accent" id="trainStatus">Paused</span>
+      </div>
+
+      <div class="metric" style="margin-bottom:12px">
+        <div class="row"><span class="label">Epoch</span><span class="value" id="m_epoch">0 / 10</span></div>
+        <div class="bar"><i id="b_epoch"></i></div>
+      </div>
+
+      <div class="spark" style="margin-bottom:10px">
+        <div style="flex:1">
+          <div class="row" style="margin-bottom:8px">
+            <span class="label">Accuracy</span><span class="value" id="m_acc">0%</span>
+          </div>
+          <div class="bar"><i id="b_acc"></i></div>
+        </div>
+      </div>
+
+      <div class="spark">
+        <div style="flex:1">
+          <div class="row" style="margin-bottom:8px">
+            <span class="label">Loss</span><span class="value" id="m_loss">1.000</span>
+          </div>
+          <div class="bar"><i id="b_loss"></i></div>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- Results -->
+    <section class="card col-12 fade-in delay2">
+      <div class="head">
+        <h3>Prediction Results</h3>
+        <span class="soft-accent" id="predStatus">Waiting for input</span>
+      </div>
+
+      <div class="grid" style="gap:16px">
+        <div class="col-8">
+          <div class="result">
+            <span class="tag soft-accent">Extracted Text</span>
+            <div class="mono" id="ocrText">—</div>
+          </div>
+        </div>
+        <div class="col-4">
+          <div class="result">
+            <span class="tag soft-accent">Prediction</span>
+            <div class="mono"><strong id="predLabel">—</strong></div>
+            <div class="confidence">
+              <div class="row"><span class="label">Confidence</span><span class="value" id="confVal">0%</span></div>
+              <div class="bar"><i id="confBar"></i></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+</div>
+
+<script>
+  // helpers
+  const $ = (s) => document.querySelector(s);
+  const setBar = (id, v) => { const el = document.querySelector(id); if(el) el.style.width = Math.max(0, Math.min(100, v)) + '%'; };
+  const setText= (id, t) => { const el = document.querySelector(id); if(el) el.textContent = t; };
+  const stepSetActive = (index) => {
+    const chips = Array.from(document.querySelectorAll('#preSteps .chip'));
+    chips.forEach((c,i)=> c.classList.toggle('active', i === index));
+  };
+
+  // Chart.js pie chart setup for Thresholding
+  let thresholdChart = null;
+  function createThresholdChart(initial=0){
+    const ctx = document.getElementById('thresholdChart').getContext('2d');
+    if(thresholdChart) thresholdChart.destroy();
+    thresholdChart = new Chart(ctx, {
+      type: 'doughnut',
+      data: {
+        labels: ['Applied','Remaining'],
+        datasets: [{
+          data: [initial, Math.max(0, 100-initial)],
+          backgroundColor: [
+            'rgba(255,122,24,0.95)',   // warm orange
+            'rgba(255,255,255,0.18)'   // subtle glass leftover
+          ],
+          borderColor: [
+            'rgba(255,122,24,1)',
+            'rgba(255,255,255,0.25)'
+          ],
+          borderWidth: 2,
+          cutout: '60%'
+        }]
+      },
+      options: {
+        responsive: false,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              label: function(context) {
+                const label = context.label || '';
+                const value = context.raw || 0;
+                return `${label}: ${value}%`;
+              }
+            }
+          }
+        }
+      }
+    });
+  }
+
+  // initialize with 0
+  createThresholdChart(0);
+
+  // upload controls (demo only)
+  const fileInput = document.querySelector('#fileInput');
+  const pickBtn = document.querySelector('#pick');
+  const drop = document.querySelector('#drop');
+  if(pickBtn) pickBtn.addEventListener('click', ()=> fileInput.click());
+  if(drop){
+    drop.addEventListener('dragover', e=>{e.preventDefault(); drop.classList.add('dragover');});
+    drop.addEventListener('dragleave', ()=> drop.classList.remove('dragover'));
+    drop.addEventListener('drop', e=>{
+      e.preventDefault(); drop.classList.remove('dragover');
+      if(e.dataTransfer.files?.[0]) fileInput.files = e.dataTransfer.files;
+    });
+  }
+
+  // Demo pipeline (kept under ~10s for preprocess+predict)
+  const demoBtn = document.querySelector('#startDemo');
+  if(demoBtn) demoBtn.addEventListener('click', runDemo);
+
+  function runDemo(){
+    const fileChosen = fileInput.files?.[0];
+    if(!fileChosen){
+      // small feedback pulse on upload area
+      if(drop) { drop.style.transform='scale(1.01)'; setTimeout(()=> drop.style.transform='scale(1)', 150); }
+    }
+    // reset UI
+    ['#b_noise','#b_thresh','#b_skew','#b_norm','#b_epoch','#b_acc','#b_loss','#confBar'].forEach(id=> setBar(id,0));
+    ['#m_noise','#m_thresh','#m_skew','#m_norm','#m_epoch','#m_acc','#m_loss','#confVal','#predLabel','#ocrText']
+      .forEach((id,i)=> setText(id, i<=3?'0%': i===4?'0 / 10': i===5?'0%': i===6?'1.000': i===7?'0%':'—'));
+    // update chart and label
+    updateThresholdChart(0);
+
+    setText('#preStatus','Starting...');
+    setText('#trainStatus','Paused');
+    setText('#predStatus','Waiting...');
+    stepSetActive(0);
+
+    // PREPROCESSING (≈ 6.5s total)
+    sequence([
+      () => animateMetric('#m_noise','#b_noise', 0,100, 1300, 'Noise Removal'),
+      () => animateMetricWithChart('#m_thresh','#b_thresh', 0,100, 1200, 'Thresholding', 1),
+      () => animateMetric('#m_skew','#b_skew', 0,100, 1000, 'Deskew', 2),
+      () => animateMetric('#m_norm','#b_norm', 0,100, 900,  'Normalization', 3),
+    ]).then(()=>{
+      setText('#preStatus','Ready');
+      stepSetActive(4);
+      // OCR + PREDICT (≈ 3.2s)
+      predictPhase();
+      // TRAINING (runs separately, looks live)
+      trainingPhase();
+    });
+  }
+
+  // animate generic metric (progress bar + label)
+  function animateMetric(labelSel, barSel, from, to, duration, status, stepIndex){
+    return new Promise((resolve)=>{
+      if(typeof stepIndex==='number'){ setText('#preStatus', status+'…'); stepSetActive(stepIndex); }
+      const start = performance.now();
+      const tick = (now)=>{
+        const p = Math.min(1, (now - start)/duration);
+        const val = Math.round(from + (to-from)*p);
+        setText(labelSel, val + '%');
+        setBar(barSel, val);
+        if(p<1) requestAnimationFrame(tick); else resolve();
+      };
+      requestAnimationFrame(tick);
+    });
+  }
+
+  // specialized animate for threshold that updates the pie chart
+  function animateMetricWithChart(labelSel, barSel, from, to, duration, status, stepIndex){
+    return new Promise((resolve)=>{
+      if(typeof stepIndex==='number'){ setText('#preStatus', status+'…'); stepSetActive(stepIndex); }
+      const start = performance.now();
+      const tick = (now)=>{
+        const p = Math.min(1, (now - start)/duration);
+        const val = Math.round(from + (to-from)*p);
+        setText(labelSel, val + '%');
+        setBar(barSel, val);
+        updateThresholdChart(val);
+        if(p<1) requestAnimationFrame(tick); else resolve();
+      };
+      requestAnimationFrame(tick);
+    });
+  }
+
+  function updateThresholdChart(value){
+    // update chart dataset and label
+    if(!thresholdChart) return;
+    thresholdChart.data.datasets[0].data = [value, Math.max(0,100-value)];
+    thresholdChart.update();
+    // update numeric label shown to user
+    setText('#m_thresh', value + '%');
+  }
+
+  function predictPhase(){
+    setText('#predStatus','Running OCR & inference…');
+    // Fake stagger updates to feel alive while staying within the 10s budget overall
+    setTimeout(()=> setText('#ocrText','HELLO PRAIX — FUTURISTIC OCR UI 💫'), 900);
+    setTimeout(()=> { setText('#confVal','68%'); setBar('#confBar',68); setText('#predLabel','Text'); }, 1500);
+    setTimeout(()=> { setText('#confVal','82%'); setBar('#confBar',82); }, 2300);
+    setTimeout(()=> { setText('#confVal','93%'); setBar('#confBar',93); setText('#predStatus','Done'); }, 3200);
+  }
+
+  function trainingPhase(){
+    setText('#trainStatus','Training…');
+    const epochs=10; let e=0, acc=0, loss=1.0;
+    const tick=()=>{
+      if(e>=epochs){ setText('#trainStatus','Complete'); return; }
+      e++; acc = Math.min(98, acc + (8 + Math.random()*6)); loss = Math.max(0.02, loss - (0.08 + Math.random()*0.06));
+      setText('#m_epoch', `${e} / ${epochs}`); setBar('#b_epoch', (e/epochs)*100);
+      setText('#m_acc', `${Math.round(acc)}%`); setBar('#b_acc', Math.round(acc));
+      setText('#m_loss', loss.toFixed(3)); setBar('#b_loss', (1 - Math.max(0, Math.min(1, loss)))*100);
+      setTimeout(tick, 300); // ~3s total, independent of the 10s preprocess+predict UX
+    };
+    tick();
+  }
+
+  // helper to run a list of async steps
+  function sequence(funcs){
+    return funcs.reduce((p,fn)=> p.then(fn), Promise.resolve());
+  }
+
+  // init: draw chart with 0%
+  createThresholdChart(0);
+</script>
+</body>
+</html>
